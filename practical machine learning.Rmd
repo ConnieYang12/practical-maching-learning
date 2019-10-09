@@ -1,0 +1,128 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+<style type="text/css">
+h1 { /* Header 1  */
+  font-size: 28px;
+  color: Black;
+}
+</style>
+# Background
+
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+
+```{r}
+library(caret)
+library(ggplot2)
+library(rpart)
+library(rattle)
+library(RColorBrewer)
+library(randomForest)
+library(gbm)
+library(plyr)
+  
+```
+
+
+```{r}
+download.file(url = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", 
+              destfile = "./pml-training.csv", method = "curl")
+training_data <- read.csv("./pml-training.csv", na.strings=c("NA","#DIV/0!",""))
+download.file(url = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", 
+              destfile = "./pml-testing.csv", method = "curl")
+testing_data <- read.csv("./pml-testing.csv", na.strings=c("NA","#DIV/0!",""))
+```
+
+<style type="text/css">
+h1 { /* Header 1  */
+  font-size: 28px;
+  color: Black;
+}
+</style>
+# Cleaning the data
+remove all columns contain NA and remove features that are not in the testing dataset. 
+```{r}
+ NA_trainingCount = sapply(1:dim(training_data)[2],function(x)sum(is.na(training_data[,x])))
+    NA_traininglist = which(NA_trainingCount>0)
+    training_data = training_data[,-NA_traininglist]
+    training_data = training_data[,-c(1:7)]
+  
+    NA_testingCount = sapply(1:dim(testing_data)[2],function(x)sum(is.na(testing_data[,x])))
+    NA_testinglist = which(NA_testingCount>0)
+    testing_data = testing_data[,-NA_testinglist]
+    testing_data = testing_data[,-c(1:7)]
+    dim(training_data); dim(testing_data)
+```
+<style type="text/css">
+h1 { /* Header 1  */
+  font-size: 28px;
+  color: Black;
+}
+</style>
+# Data partition
+```{r}
+set.seed(12345)
+
+inTrain <- createDataPartition(training_data$classe, p=0.6, list=FALSE)
+training <- training_data[inTrain,]
+testing <- training_data[-inTrain,]
+
+dim(training); dim(testing)
+
+```
+
+<style type="text/css">
+h1 { /* Header 1  */
+  font-size: 28px;
+  color: Black;
+}
+</style>
+# Decision Tree Model
+
+```{r}
+modFit_DT <- rpart(classe ~ ., data = training, method="class")
+fancyRpartPlot(modFit_DT) 
+```
+
+
+
+
+
+```{r}
+set.seed(12345)
+
+prediction1 <- predict(modFit_DT, newdata=testing, type = "class")
+confusionMatrix(prediction1, testing$class)
+
+```
+
+<style type="text/css">
+h1 { /* Header 1  */
+  font-size: 28px;
+  color: Black;
+}
+</style>
+# Random Forest Model
+```{r}
+modfit_RF=randomForest(classe~., data=training, method='class')
+prediction2 = predict(modfit_RF,testing,type='class') 
+qplot(roll_belt, magnet_dumbbell_y, colour=classe, data=training)   
+```
+
+```{r}
+confusionMatrix(prediction2, testing$class)
+```
+
+<style type="text/css">
+h1 { /* Header 1  */
+  font-size: 28px;
+  color: Black;
+}
+</style>
+# Conclusion
+Decision tree model is about 75% accuracy while random forest model has 99% accuracy.
+
